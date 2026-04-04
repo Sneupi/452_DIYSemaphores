@@ -1,0 +1,3 @@
+UTM for ARM-based Macs (Apple Silicon M1/M2/...) Only: https://github.com/utmapp/UTM/releases/latest/download/UTM.dmg
+VM Disk Image for UTM (ARM Macs Only): https://drive.google.com/file/d/1Pe5TomGKI2-eRtRSaYCWKVGLfM5RIi7l/view?usp=drive_link
+VM Disk Image for x86 Windows/Mac Only: https://drive.google.com/file/d/11s1zVbSSbkg75egbRSu3ZmcApbw19CsA/view?usp=sharing
