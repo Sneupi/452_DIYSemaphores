@@ -25,6 +25,7 @@ struct sim_data {
     struct csc452_sem full;
     struct csc452_sem mutex;
     struct csc452_sem empty;
+    struct csc452_sem honk;
 };
 
 void seminit(struct csc452_sem *sem, int value) { syscall(451, sem, value); }
@@ -39,16 +40,25 @@ void producer(struct sim_data *s) {
         // enqueue
         down(&(s->empty));
         down(&(s->mutex));
+
         int item = s->counter;
         s->queue[s->idx] = item;
         s->idx++;
         s->counter++;
+
+        // printf("++ %3d | waiting=%d\n", item, s->idx);
+        printf("Car %d coming from the %c direction arrived in the queue at time %d.\n", item, -1, -1);
+
+        // if first arrival, honk
+        if (!(s->idx - 1)) {
+            up(&(s->honk));
+            printf("Car %d coming from the %c direction, blew their horn at time %d.\n", item, -1, -1);
+        }
+        
         up(&(s->mutex));
         up(&(s->full)); 
         
-        // do something
-        printf("++ %3d | waiting=%d\n", item, s->idx);
-        
+        // roll for end of batch
         if (rand() % 100 > 75) sleep(8); // 25% chance of 8s sleep
     }
 }
@@ -57,6 +67,13 @@ void consumer(struct sim_data *s) {
 
     // process each item
     while (1) {
+
+        // sleep until woken
+        if (!s->idx) {
+            printf("The flagperson is now asleep.\n");
+            down(&(s->honk));
+            printf("The flagperson is now awake.\n");
+        }
 
         // dequeue
         down(&(s->full)); 
@@ -69,9 +86,10 @@ void consumer(struct sim_data *s) {
         up(&(s->mutex));
         up(&(s->empty));
         
-        // do something
-        printf("-- %3d | waiting=%d\n", item, s->idx);
+        // process the item
         sleep(1);
+        // printf("-- %3d | waiting=%d\n", item, s->idx);
+        printf("Car %d coming from the %c direction left the construction zone at time %d.\n", item, -1, -1);
     }
 }
 
@@ -105,6 +123,7 @@ int main() {
     seminit(&(data->full), 0);
     seminit(&(data->empty), QUEUE_SIZE);
     seminit(&(data->mutex), 1);
+    seminit(&(data->honk), 0);
 
     // Begin main program simulation
     
