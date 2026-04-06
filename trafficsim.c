@@ -27,7 +27,7 @@ struct csc452_sem {
     void *queue;
 };
 
-#define QUEUE_SIZE 100
+#define QUEUE_SIZE 20
 
 struct sim_data {
     int counter;
