@@ -30,11 +30,18 @@ struct csc452_sem {
 
 struct sim_data {
     int counter;
-    int idx;
-    int queue[QUEUE_SIZE];
-    struct csc452_sem full;
+
+    int e;
+    int w;
+    int queue_e[QUEUE_SIZE];
+    int queue_w[QUEUE_SIZE];
+
+    struct csc452_sem full_e;
+    struct csc452_sem empty_e;
+    struct csc452_sem full_w;
+    struct csc452_sem empty_w;
+
     struct csc452_sem mutex;
-    struct csc452_sem empty;
     struct csc452_sem honk;
 };
 
@@ -42,34 +49,41 @@ void seminit(struct csc452_sem *sem, int value) { syscall(451, sem, value); }
 void down(struct csc452_sem *sem) { syscall(452, sem); }
 void up(struct csc452_sem *sem) { syscall(453, sem); }
 
-void producer(struct sim_data *s) {
+void producer(struct sim_data *s, int isWest) {
     
+    int *queue = (isWest) ? s->queue_w : s->queue_e;
+    int *idx = (isWest) ? &(s->w) : &(s->e);
+    int *idx_opp = (isWest) ? &(s->e) : &(s->w);
+    const char dir = (isWest) ? 'W' : 'E';
+    struct csc452_sem *empty = (isWest) ? &(s->empty_w) : &(s->empty_e);
+    struct csc452_sem *full = (isWest) ? &(s->full_w) : &(s->full_e);
+
     // produce new items
     while (1) {
 
-        // enqueue
-        down(&(s->empty));
+        down(empty);
         down(&(s->mutex));
-
+        
+        // enqueue
         int item = s->counter;
-        s->queue[s->idx] = item;
-        s->idx++;
+        queue[*idx] = item;
+        (*idx)++;
         s->counter++;
-
-        // printf("++ %3d | waiting=%d\n", item, s->idx);
-        printf("Car %d coming from the %c direction arrived in the queue at time %d.\n", item, -1, -1);
-
+        printf("Car %d coming from the %c direction arrived in the queue at time %d.\n", item, dir, -1);
+        
         // if first arrival, honk
-        if (!(s->idx - 1)) {
+        if ((*idx)-1 == 0 && *idx_opp == 0) {
+            printf("Car %d coming from the %c direction, blew their horn at time %d.\n", item, dir, -1);
             up(&(s->honk));
-            printf("Car %d coming from the %c direction, blew their horn at time %d.\n", item, -1, -1);
         }
-        
+
+        int maxed = (*idx == QUEUE_SIZE);
+
         up(&(s->mutex));
-        up(&(s->full)); 
-        
-        // roll for end of batch
-        if (rand() % 100 > 75) sleep(8); // 25% chance of 8s sleep
+        up(full);
+
+        // 25% chance traffic pauses for 8s
+        if (maxed || rand() % 100 < 25) sleep(8);
     }
 }
 
@@ -79,26 +93,31 @@ void consumer(struct sim_data *s) {
     while (1) {
 
         // sleep until woken
-        if (!s->idx) {
+        down(&(s->mutex));
+        if (s->e == 0 && s->w == 0) {
             printf("The flagperson is now asleep.\n");
+            up(&(s->mutex));
             down(&(s->honk));
             printf("The flagperson is now awake.\n");
         }
-
-        // dequeue
-        down(&(s->full)); 
-        down(&(s->mutex));
-        int item = s->queue[0]; 
-        for (int i = 0; i < s->idx - 1; i++) {
-            s->queue[i] = s->queue[i + 1];
+        else {
+            up(&(s->mutex));
         }
-        s->idx--;
+
+        down(&(s->full_e));
+        down(&(s->mutex));
+        
+        // dequeue
+        int item = s->queue_e[0]; 
+        for (int i = 0; i < s->e - 1; i++) {
+            s->queue_e[i] = s->queue_e[i + 1];
+        }
+        s->e--;
         up(&(s->mutex));
-        up(&(s->empty));
+        up(&(s->empty_e));
         
         // process the item
         sleep(1);
-        // printf("-- %3d | waiting=%d\n", item, s->idx);
         printf("Car %d coming from the %c direction left the construction zone at time %d.\n", item, -1, -1);
     }
 }
@@ -130,8 +149,10 @@ int main() {
 
     memset(data, 0, sizeof(struct sim_data));
 
-    seminit(&(data->full), 0);
-    seminit(&(data->empty), QUEUE_SIZE);
+    seminit(&(data->full_e), 0);
+    seminit(&(data->empty_e), QUEUE_SIZE);
+    seminit(&(data->full_w), 0);
+    seminit(&(data->empty_w), QUEUE_SIZE);
     seminit(&(data->mutex), 1);
     seminit(&(data->honk), 0);
 
@@ -147,7 +168,7 @@ int main() {
     if (pid == 0) {
         consumer(data);
     } else {
-        producer(data);
+        producer(data, 0);
         wait(NULL); // Keep parent alive
     }
 
