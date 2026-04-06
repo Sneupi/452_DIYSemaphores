@@ -124,7 +124,6 @@ void consumer(struct sim_data *v) {
         // generalized vars
         int *queue = (isNorth) ? v->queue_n : v->queue_s;
         int *idx = (isNorth) ? &(v->n) : &(v->s);
-        int *idx_opp = (isNorth) ? &(v->s) : &(v->n);
         const char dir = (isNorth) ? 'N' : 'S';
         struct csc452_sem *empty = (isNorth) ? &(v->empty_n) : &(v->empty_s);
         struct csc452_sem *full = (isNorth) ? &(v->full_n) : &(v->full_s);
