@@ -1,11 +1,12 @@
 # Makefile for CSC 452 Project 4 -- (Development utilities)
-
--include .env
 SHELL:=/bin/bash
+
+# variables e.g. SSH
+-include .env
 
 .PHONY: csc452 build install update copy_to_working copy_to_kernel backup fetch login dev_list
 
-
+# mapping between dev folder and kernel copy
 WRK := dev
 COPY_FILES := \
 	sys.c:kernel/sys.c \
@@ -75,8 +76,3 @@ fetch:
 
 login:
 	ssh ${SSH}
-
-# Dev -------------------------------------------------------------------------
-
-dev_list:
-	@for item in $(COPY_FILES); do echo $$item; done

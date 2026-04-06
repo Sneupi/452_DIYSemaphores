@@ -455,3 +455,12 @@
 448	i386	process_mrelease	sys_process_mrelease
 449	i386	futex_waitv		sys_futex_waitv
 450	i386	set_mempolicy_home_node		sys_set_mempolicy_home_node
+# -----------------------------------------------------------------------------
+#  CSC 452 PROJECT4 BEGIN
+# -----------------------------------------------------------------------------
+451 i386    csc452_seminit sys_csc452_seminit
+452 i386    csc452_down    sys_csc452_down
+453 i386    csc452_up      sys_csc452_up
+# -----------------------------------------------------------------------------
+#  CSC 452 PROJECT4 END
+# -----------------------------------------------------------------------------

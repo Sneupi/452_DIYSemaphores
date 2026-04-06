@@ -310,6 +310,19 @@ static inline void addr_limit_user_check(void)
  * include the prototypes if CONFIG_ARCH_HAS_SYSCALL_WRAPPER is enabled.
  */
 #ifndef CONFIG_ARCH_HAS_SYSCALL_WRAPPER
+
+//-----------------------------------------------------------------------------
+// CSC 452 PROJECT4 BEGIN
+//-----------------------------------------------------------------------------
+
+asmlinkage long sys_csc452_seminit(struct csc452_sem *sem, int value);
+asmlinkage long sys_csc452_down(struct csc452_sem *sem);
+asmlinkage long sys_csc452_up(struct csc452_sem *sem);
+
+//-----------------------------------------------------------------------------
+// CSC 452 PROJECT4 END
+//-----------------------------------------------------------------------------
+
 asmlinkage long sys_io_setup(unsigned nr_reqs, aio_context_t __user *ctx);
 asmlinkage long sys_io_destroy(aio_context_t ctx);
 asmlinkage long sys_io_submit(aio_context_t, long,

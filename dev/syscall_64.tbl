@@ -372,7 +372,15 @@
 448	common	process_mrelease	sys_process_mrelease
 449	common	futex_waitv		sys_futex_waitv
 450	common	set_mempolicy_home_node	sys_set_mempolicy_home_node
-
+# -----------------------------------------------------------------------------
+#  CSC 452 PROJECT4 BEGIN
+# -----------------------------------------------------------------------------
+451 common  csc452_seminit sys_csc452_seminit
+452 common  csc452_down    sys_csc452_down
+453 common  csc452_up      sys_csc452_up
+# -----------------------------------------------------------------------------
+#  CSC 452 PROJECT4 END
+# -----------------------------------------------------------------------------
 #
 # Due to a historical design error, certain syscalls are numbered differently
 # in x32 as compared to native x86_64.  These syscalls have numbers 512-547.

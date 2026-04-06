@@ -30,6 +30,23 @@
 #define __SC_COMP_3264(_nr, _32, _64, _comp) __SC_3264(_nr, _32, _64)
 #endif
 
+//-----------------------------------------------------------------------------
+// CSC 452 PROJECT4 BEGIN
+//-----------------------------------------------------------------------------
+
+#define __NR_csc452_seminit 451
+__SYSCALL(__NR_csc452_seminit, sys_csc452_seminit)
+
+#define __NR_csc452_down 452
+__SYSCALL(__NR_csc452_down, sys_csc452_down)
+
+#define __NR_csc452_up 453
+__SYSCALL(__NR_csc452_up, sys_csc452_up)
+
+//-----------------------------------------------------------------------------
+// CSC 452 PROJECT4 END
+//-----------------------------------------------------------------------------
+
 #define __NR_io_setup 0
 __SC_COMP(__NR_io_setup, sys_io_setup, compat_sys_io_setup)
 #define __NR_io_destroy 1
@@ -887,7 +904,7 @@ __SYSCALL(__NR_futex_waitv, sys_futex_waitv)
 __SYSCALL(__NR_set_mempolicy_home_node, sys_set_mempolicy_home_node)
 
 #undef __NR_syscalls
-#define __NR_syscalls 451
+#define __NR_syscalls 454 // +3 for CSC 452 PROJECT4 syscalls
 
 /*
  * 32 bit systems traditionally used different

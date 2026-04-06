@@ -162,6 +162,132 @@ int fs_overflowgid = DEFAULT_FS_OVERFLOWGID;
 EXPORT_SYMBOL(fs_overflowuid);
 EXPORT_SYMBOL(fs_overflowgid);
 
+//-----------------------------------------------------------------------------
+// CSC 452 PROJECT4 BEGIN
+//-----------------------------------------------------------------------------
+
+#define CSC452_DEBUG // prints debug
+
+struct proc_q
+{
+	struct task_struct *task;
+	struct proc_q *next;
+};
+
+void enqueue(struct proc_q **queue, struct task_struct *task)
+{
+    struct proc_q *new_node = kmalloc(sizeof(struct proc_q), GFP_KERNEL);
+    if (!new_node) return;
+
+    new_node->task = task;
+    new_node->next = NULL;
+
+    if (*queue == NULL) {
+        *queue = new_node;
+        return;
+    }
+
+    struct proc_q *cur = *queue;
+    while (cur->next != NULL) cur = cur->next;
+    cur->next = new_node;
+}
+
+struct task_struct *dequeue(struct proc_q **queue)
+{
+    if (*queue == NULL) return NULL; 
+
+    struct proc_q *old_head = *queue;
+    struct task_struct *task = old_head->task;
+    *queue = old_head->next;
+    kfree(old_head);
+
+    return task;
+}
+
+struct csc452_sem
+{
+	int value;
+	struct mutex *lock;
+	struct proc_q *queue;
+};
+
+SYSCALL_DEFINE2(csc452_seminit, struct csc452_sem *, sem, int, value) 
+{
+    struct csc452_sem ksem;
+
+	// allocate in kernel space
+    ksem.lock = kmalloc(sizeof(struct mutex), GFP_KERNEL);
+    if (!ksem.lock) return -ENOMEM;
+    
+    mutex_init(ksem.lock);
+    ksem.value = value;
+    ksem.queue = NULL;
+
+    // Copy init kernel struct back to the user
+    if (copy_to_user(sem, &ksem, sizeof(struct csc452_sem))) {
+        kfree(ksem.lock);
+        return -EFAULT;
+    }
+    return 0;
+}
+
+SYSCALL_DEFINE1(csc452_down, struct csc452_sem *, sem) 
+{
+    struct csc452_sem ksem;
+    // copy userspace sem to kernel
+    if (copy_from_user(&ksem, sem, sizeof(struct csc452_sem))) return -EFAULT;
+
+	// decrement sem
+    mutex_lock(ksem.lock);
+    get_user(ksem.value, &sem->value);
+    ksem.value--;
+    put_user(ksem.value, &sem->value);
+
+	// if not available, enqueue & sleep process
+    if (ksem.value < 0) {
+        get_user(ksem.queue, &sem->queue);
+        enqueue(&(ksem.queue), current);
+        put_user(ksem.queue, &sem->queue);
+        set_current_state(TASK_INTERRUPTIBLE);
+        mutex_unlock(ksem.lock); // (unlock before sleep)
+        schedule();
+    } else {
+        mutex_unlock(ksem.lock); // simple case, just unlock
+    }
+    
+    return 0;
+}
+
+SYSCALL_DEFINE1(csc452_up, struct csc452_sem *, sem) 
+{
+    struct csc452_sem ksem;
+    struct task_struct *p;
+    int value;
+
+    if (copy_from_user(&ksem, sem, sizeof(struct csc452_sem))) return -EFAULT;
+
+	// increment sem
+    mutex_lock(ksem.lock);
+    get_user(value, &sem->value);
+	value++;
+    put_user(value, &sem->value);
+
+	// if sem now available, awake a process
+    if (value <= 0) {
+        get_user(ksem.queue, &sem->queue);
+        p = dequeue(&(ksem.queue));
+        put_user(ksem.queue, &sem->queue);
+        if (p) wake_up_process(p);
+    }
+    
+    mutex_unlock(ksem.lock);
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+// CSC 452 PROJECT4 END
+//-----------------------------------------------------------------------------
+
 /*
  * Returns true if current's euid is same as p's uid or euid,
  * or has CAP_SYS_NICE to p's user_ns.
