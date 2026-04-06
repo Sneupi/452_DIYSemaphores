@@ -33,15 +33,15 @@ struct sim_data {
     int counter;
     int start_time;
 
-    int e;
-    int w;
-    int queue_e[QUEUE_SIZE];
-    int queue_w[QUEUE_SIZE];
+    int s;
+    int n;
+    int queue_s[QUEUE_SIZE];
+    int queue_n[QUEUE_SIZE];
 
-    struct csc452_sem full_e;
-    struct csc452_sem empty_e;
-    struct csc452_sem full_w;
-    struct csc452_sem empty_w;
+    struct csc452_sem full_s;
+    struct csc452_sem empty_s;
+    struct csc452_sem full_n;
+    struct csc452_sem empty_n;
 
     struct csc452_sem mutex;
     struct csc452_sem honk;
@@ -51,37 +51,37 @@ void seminit(struct csc452_sem *sem, int value) { syscall(451, sem, value); }
 void down(struct csc452_sem *sem) { syscall(452, sem); }
 void up(struct csc452_sem *sem) { syscall(453, sem); }
 
-void producer(struct sim_data *s, int isWest) {
+void producer(struct sim_data *v, int isNorth) {
     
-    int *queue = (isWest) ? s->queue_w : s->queue_e;
-    int *idx = (isWest) ? &(s->w) : &(s->e);
-    int *idx_opp = (isWest) ? &(s->e) : &(s->w);
-    const char dir = (isWest) ? 'W' : 'E';
-    struct csc452_sem *empty = (isWest) ? &(s->empty_w) : &(s->empty_e);
-    struct csc452_sem *full = (isWest) ? &(s->full_w) : &(s->full_e);
+    int *queue = (isNorth) ? v->queue_n : v->queue_s;
+    int *idx = (isNorth) ? &(v->n) : &(v->s);
+    int *idx_opp = (isNorth) ? &(v->s) : &(v->n);
+    const char dir = (isNorth) ? 'N' : 'S';
+    struct csc452_sem *empty = (isNorth) ? &(v->empty_n) : &(v->empty_s);
+    struct csc452_sem *full = (isNorth) ? &(v->full_n) : &(v->full_s);
 
     // produce new items
     while (1) {
 
         down(empty);
-        down(&(s->mutex));
+        down(&(v->mutex));
         
         // enqueue
-        int item = s->counter;
+        int item = v->counter;
         queue[*idx] = item;
         (*idx)++;
-        s->counter++;
-        printf("Car %d coming from the %c direction arrived in the queue at time %d.\n", item, dir, (int)time(NULL)-(s->start_time));
+        v->counter++;
+        printf("Car %d coming from the %c direction arrived in the queue at time %d.\n", item, dir, (int)time(NULL)-(v->start_time));
         
         // if first arrival, honk
         if ((*idx)-1 == 0 && *idx_opp == 0) {
-            printf("Car %d coming from the %c direction, blew their horn at time %d.\n", item, dir, (int)time(NULL)-(s->start_time));
-            up(&(s->honk));
+            printf("Car %d coming from the %c direction, blew their horn at time %d.\n", item, dir, (int)time(NULL)-(v->start_time));
+            up(&(v->honk));
         }
 
         int maxed = (*idx == QUEUE_SIZE);
 
-        up(&(s->mutex));
+        up(&(v->mutex));
         up(full);
 
         // 25% chance traffic pauses for 8s
@@ -89,60 +89,60 @@ void producer(struct sim_data *s, int isWest) {
     }
 }
 
-void consumer(struct sim_data *s) {
+void consumer(struct sim_data *v) {
 
     // init sleeping, await first honk
-    int isWest = 1;
-    down(&(s->honk));
+    int isNorth = 1;
+    down(&(v->honk));
 
     // process each item
     while (1) {
 
         // if no activity, sleep
-        down(&(s->mutex));
-        if (s->e == 0 && s->w == 0) {
+        down(&(v->mutex));
+        if (v->s == 0 && v->n == 0) {
             printf("The flagperson is now asleep.\n");
-            up(&(s->mutex));
-            down(&(s->honk));
+            up(&(v->mutex));
+            down(&(v->honk));
             printf("The flagperson is now awake.\n");
         } 
         // if opposite exceeds 8 pileup, flip
         else if (
-            (isWest && !s->w && s->e) ||
-            (!isWest && !s->e && s->w) ||
-            (isWest && s->w < 8 && s->e >= 8) ||
-            (!isWest && s->e < 8 && s->w >= 8)
+            (isNorth && !v->n && v->s) ||
+            (!isNorth && !v->s && v->n) ||
+            (isNorth && v->n < 8 && v->s >= 8) ||
+            (!isNorth && v->s < 8 && v->n >= 8)
         ) {
-            isWest = !isWest;
-            up(&(s->mutex));
+            isNorth = !isNorth;
+            up(&(v->mutex));
         } 
         // (check normal exit)
         else {
-            up(&(s->mutex));
+            up(&(v->mutex));
         }
 
         // generalized vars
-        int *queue = (isWest) ? s->queue_w : s->queue_e;
-        int *idx = (isWest) ? &(s->w) : &(s->e);
-        int *idx_opp = (isWest) ? &(s->e) : &(s->w);
-        const char dir = (isWest) ? 'W' : 'E';
-        struct csc452_sem *empty = (isWest) ? &(s->empty_w) : &(s->empty_e);
-        struct csc452_sem *full = (isWest) ? &(s->full_w) : &(s->full_e);
+        int *queue = (isNorth) ? v->queue_n : v->queue_s;
+        int *idx = (isNorth) ? &(v->n) : &(v->s);
+        int *idx_opp = (isNorth) ? &(v->s) : &(v->n);
+        const char dir = (isNorth) ? 'N' : 'S';
+        struct csc452_sem *empty = (isNorth) ? &(v->empty_n) : &(v->empty_s);
+        struct csc452_sem *full = (isNorth) ? &(v->full_n) : &(v->full_s);
 
         // dequeue an item
         down(full);
-        down(&(s->mutex));
+        down(&(v->mutex));
         int item = queue[0]; 
         for (int i = 0; i < (*idx) - 1; i++) {
             queue[i] = queue[i + 1];
         }
         (*idx)--;
-        up(&(s->mutex));
+        up(&(v->mutex));
         up(empty);
         
         // process the item
         sleep(1);
-        printf("Car %d coming from the %c direction left the construction zone at time %d.\n", item, dir, (int)time(NULL)-(s->start_time));
+        printf("Car %d coming from the %c direction left the construction zone at time %d.\n", item, dir, (int)time(NULL)-(v->start_time));
     }
 }
 
@@ -173,10 +173,10 @@ int main() {
 
     memset(data, 0, sizeof(struct sim_data));
 
-    seminit(&(data->full_e), 0);
-    seminit(&(data->empty_e), QUEUE_SIZE);
-    seminit(&(data->full_w), 0);
-    seminit(&(data->empty_w), QUEUE_SIZE);
+    seminit(&(data->full_s), 0);
+    seminit(&(data->empty_s), QUEUE_SIZE);
+    seminit(&(data->full_n), 0);
+    seminit(&(data->empty_n), QUEUE_SIZE);
     seminit(&(data->mutex), 1);
     seminit(&(data->honk), 0);
 
