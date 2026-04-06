@@ -89,6 +89,9 @@ void producer(struct sim_data *s, int isWest) {
 
 void consumer(struct sim_data *s) {
 
+    // init sleeping, await first honk
+    down(&(s->honk));
+
     // process each item
     while (1) {
 
@@ -104,10 +107,9 @@ void consumer(struct sim_data *s) {
             up(&(s->mutex));
         }
 
+        // dequeue
         down(&(s->full_e));
         down(&(s->mutex));
-        
-        // dequeue
         int item = s->queue_e[0]; 
         for (int i = 0; i < s->e - 1; i++) {
             s->queue_e[i] = s->queue_e[i + 1];
