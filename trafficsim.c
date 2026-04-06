@@ -1,3 +1,13 @@
+/**
+ * File: trafficsim.c
+ * Author: Gabe Venegas
+ * Date: 4/6/2026
+ *
+ * Traffic simulation making use of multi-processing 
+ * and lane queues (shared/sync via "DIY" semaphores),
+ * to simulate a "two-lane, single-wide road" problem, 
+ * handled by a flag person to conduct traffic through.
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
